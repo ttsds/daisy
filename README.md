@@ -1,4 +1,4 @@
-# TTSDS: Multilingual Text-to-Speech Dataset Pipeline
+# Multilingual Text-to-Speech Dataset Pipeline for TTSDS
 
 A robust data collection and processing pipeline for creating high-quality multilingual speech datasets for TTS benchmarking.
 
