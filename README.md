@@ -1,141 +1,71 @@
-# TTSDS: Multilingual Text-to-Speech Dataset Pipeline
+# YouTube Video Scraper
 
-A robust data collection and processing pipeline for creating high-quality multilingual speech datasets for TTS benchmarking.
+This script uses Selenium to scrape YouTube search results instead of the YouTube API. It searches for videos across multiple languages and categories.
 
-## Overview
+## Setup
 
-This pipeline automates the collection, processing, and filtering of multilingual speech data from online sources to create a clean, standardized dataset suitable for training and evaluating Text-to-Speech (TTS) systems across multiple languages.
+1. Install the required dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-## Supported Languages
+2. Install Chrome browser (if not already installed)
 
-The pipeline currently supports 15 languages:
-- English (en)
-- Spanish (es)
-- Italian (it)
-- Japanese (ja)
-- Polish (pl)
-- Portuguese (pt)
-- Turkish (tr)
-- Chinese (zh)
-- French (fr)
-- German (de)
-- Korean (ko)
-- Arabic (ar)
-- Russian (ru)
-- Dutch (nl)
-- Hindi (hi)
+3. Install ChromeDriver:
+```bash
+# On Ubuntu/Debian
+sudo apt-get install chromium-chromedriver
 
-## Pipeline Stages
+# Or download from: https://chromedriver.chromium.org/
+```
 
-The data processing pipeline consists of the following stages:
+4. Set up environment variables (optional):
+```bash
+# Create a .env file
+echo "GEONAMES_USERNAME=your_geonames_username" > .env
+```
 
-1. **Video Discovery** (`01_get_videos.py`): Searches for relevant videos in target languages using YouTube API with geo-specific queries.
-
-2. **Language Verification** (`02_to_txt.py`): Extracts video metadata and verifies that content is in the target language using fastText language detection.
-
-3. **Video Download** (`03_download_videos.py`): Downloads the verified videos for further processing.
-
-4. **Utterance Extraction** (`04_get_utterances.py`): Processes videos to extract individual utterances and associated metadata.
-
-5. **Audio Processing** (`05_extract_and_filter.py`): Extracts audio segments, performs quality filtering based on:
-   - Speech quality (DNSMOS score)
-   - Background noise/music detection
-   - Transcript accuracy (WER/CER metrics)
-   - Audio duration constraints
-
-6. **Final Dataset Creation** (`06_final_filter.py`): Performs final filtering and creates the standardized dataset.
-
-## Requirements
-
-- Python 3.8+
-- YouTube Data API key
-- GeoNames API username
-- GPU recommended for audio processing (with CUDA support)
-
-### Python Dependencies
-- torch/torchaudio
-- faster_whisper
-- fasttext
-- demucs
-- transformers
-- rich
-- requests
-- geopy
-- python-dotenv
+5. Install Windscribe VPN (optional, for location-based scraping):
+```bash
+# Download and install Windscribe from: https://windscribe.com/
+# Then install the CLI tool
+```
 
 ## Usage
 
-1. **Setup Environment**:
-   ```bash
-   # Clone the repository
-   git clone https://github.com/yourusername/TTSDS.git
-   cd TTSDS
-   
-   # Create and activate a virtual environment (recommended)
-   python -m venv venv
-   source venv/bin/activate  # On Windows, use: venv\Scripts\activate
-   
-   # Install dependencies
-   pip install -r requirements.txt
-   
-   # Set up API keys in .env file
-   echo "YOUTUBE_API_KEYS=your_youtube_api_key" > .env
-   echo "GEONAMES_USERNAME=your_geonames_username" >> .env
-   ```
-
-2. **Run the Pipeline**:
-
-   To process a specific language:
-   ```bash
-   python 01_get_videos.py --language_code en
-   python 02_to_txt.py --language_code en
-   python 03_download_videos.py --language_code en
-   python 04_get_utterances.py --language_code en
-   python 05_extract_and_filter.py --language_code en --device_index 0
-   python 06_final_filter.py --language_code en
-   ```
-
-   To process all supported languages (may take significant time):
-   ```bash
-   for lang in en es it ja pl pt tr zh fr de ko ar ru nl hi; do
-       python 01_get_videos.py --language_code $lang
-       python 02_to_txt.py --language_code $lang
-       python 03_download_videos.py --language_code $lang
-       python 04_get_utterances.py --language_code $lang
-       python 05_extract_and_filter.py --language_code $lang --device_index 0
-       python 06_final_filter.py --language_code $lang
-   done
-   ```
-
-## Dataset Output Format
-
-The final dataset will be organized by language code with the following structure:
-```
-dataset/
-├── en/
-│   ├── 0001_speaker1_0.mp3
-│   ├── 0001_speaker1_0.txt
-│   ├── ...
-├── es/
-│   ├── ...
+Run the script to scrape videos for all languages:
+```bash
+python 01_get_videos.py
 ```
 
-Each audio file has a corresponding text file containing the transcript. The naming convention is:
-`{index}_{speaker_hash}_{utterance_id}.{ext}`
+Or specify a specific language:
+```bash
+python 01_get_videos.py --language_code en
+```
 
-## Quality Metrics
+To use Windscribe VPN for location-based scraping (recommended for better results):
+```bash
+python 01_get_videos.py --use_vpn
+python 01_get_videos.py --language_code en --use_vpn
+```
 
-The pipeline filters utterances based on:
-- Word Error Rate (WER < 10%)
-- Character Error Rate (CER < 5%)
-- Duration (3-30 seconds)
-- Background music/noise level
+## Features
 
-## License
+- **Multi-language support**: Searches for videos in 15 different languages
+- **Multiple search terms**: Uses 20 different search terms per language
+- **Selenium-based scraping**: No API keys required
+- **VPN integration**: Optional Windscribe VPN support for location-based scraping
+- **Respectful scraping**: Includes delays between requests
+- **Error handling**: Graceful handling of timeouts and errors
+- **Resume capability**: Skips already processed search terms
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## Output
 
-## Acknowledgments
+The script creates JSON files in the `videos/{language}/` directory structure, with each file containing search results for a specific search term in that language.
 
-- This project uses the YouTube Data API for video discovery
-- Audio processing leverages various open-source tools including faster-whisper, demucs, and torchaudio
+## Notes
+
+- The script runs Chrome in visible mode (not headless) so you can see the scraping process
+- It includes a 2-second delay between requests to be respectful to YouTube's servers
+- Video information is extracted from the search results page
+- Some metadata (like exact publish dates) may not be available from search results

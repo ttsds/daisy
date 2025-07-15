@@ -40,14 +40,28 @@ for language in video_dirs:
                 for item in data["items"]:
                     if "video" not in item["id"]["kind"]:
                         continue
+                    if language_code == "hi":
+                        # hindi has a special case, it can be in hindi or english
+                        url_file.write(
+                            f"{item['id']['videoId']},{item['snippet']['title']}\n"
+                        )
                     # check if title and description is in the target language
-                    test_text = (
-                        item["snippet"]["title"] + " " + item["snippet"]["description"]
+                    test_text_title = item["snippet"]["title"].replace("\n", " ")
+                    test_text_description = item["snippet"]["description"].replace(
+                        "\n", " "
                     )
-                    pred = language_detector.predict(test_text)[0][0].split("__")[-1]
-                    if pred != language_code:
+                    pred_title = language_detector.predict(test_text_title)[0][0].split(
+                        "__"
+                    )[-1]
+                    pred_description = language_detector.predict(test_text_description)[
+                        0
+                    ][0].split("__")[-1]
+                    if (
+                        pred_title != language_code
+                        and pred_description != language_code
+                    ):
                         skip_count += 1
-                        skip_langs.append(pred)
+                        skip_langs.append(f"{pred_title} {pred_description}")
                     url_file.write(
                         f"{item['id']['videoId']},{item['snippet']['title']}\n"
                     )
