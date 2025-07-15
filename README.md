@@ -1,4 +1,5 @@
-# YouTube Video Scraper
+
+# Multilingual Text-to-Speech Dataset Pipeline for TTSDS
 
 This script uses Selenium to scrape YouTube search results instead of the YouTube API. It searches for videos across multiple languages and categories.
 
