@@ -6,7 +6,7 @@
 
 Daisy is a diverse and multilingual speech dataset.
 The principles behind Daisy differ from common speech datasets, as the goal is **evaluation of speech models**, rather than their training.
-We only collect a small, but highly diverse set of samples for each language, complying with [fair use](#legal-disclaimer) by only using a small fraction of each data source. Instead of scraping first and filtering later, the starting point for each language is a set of "well-known sources", which are podcasts, content creators and broadcast networks associated with the language. This way, we can ensure that the dataset is diverse and representative of the language, while only including sources which are aware they are in the public eye. 
+We only collect a small, but highly diverse set of samples for each language, complying with [fair use](#legal-disclaimer) by only using a small fraction of each data source. Instead of scraping first and filtering later, the starting point for each language is a set of "well-known sources", which are podcasts, content creators and broadcast networks associated with the language. This way, we can ensure that the dataset is diverse and representative of the language, while only including sources which are aware they are in the public eye -- additionally, we ask you to follow our [usage guidelines](#usage-guidelines) when using the dataset.
 
 
 ## Setup
