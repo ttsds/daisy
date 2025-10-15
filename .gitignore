@@ -1,0 +1,9 @@
+.env
+data
+!src/daisy/data
+__pycache__
+logs
+models
+cookies.txt
+.DS_Store
+.pytest_cache
