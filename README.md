@@ -6,21 +6,8 @@
 
 Daisy is a diverse and multilingual speech dataset.
 The principles behind Daisy differ from common speech datasets, as the goal is **evaluation of speech models**, rather than their training.
-We only collect a small, but highly diverse set of samples for each language, complying with fair use by only using a small fraction of each data source. Instead of scraping first and filtering later, the starting point for each language is a set of "trusted sources", which are podcasts, content creators and broadcast networks associated with the language. This way, we can ensure that the dataset is diverse and representative of the language, while only including sources which are aware they are in the public eye. 
+We only collect a small, but highly diverse set of samples for each language, complying with [fair use](#legal-disclaimer) by only using a small fraction of each data source. Instead of scraping first and filtering later, the starting point for each language is a set of "well-known sources", which are podcasts, content creators and broadcast networks associated with the language. This way, we can ensure that the dataset is diverse and representative of the language, while only including sources which are aware they are in the public eye. 
 
-## Installation
-
-```bash
-pip install daisy
-```
-
-Or install from source:
-
-```bash
-git clone https://github.com/Christoph-Minixhofer/daisy.git
-cd daisy
-pip install -e .
-```
 
 ## Setup
 
@@ -39,6 +26,11 @@ pip install -e .
    - `yt-dlp` for downloading audio from YouTube/Bilibili
    - `ffmpeg` for audio processing
    - `selenium` and Chrome/Chromium for web scraping
+
+4. Install the package:
+   ```bash
+   pip install -e .
+   ```
 
 ## Usage
 
