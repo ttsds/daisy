@@ -1,6 +1,6 @@
 ### Legal Disclaimer for Daisy
 
-The audio samples in the Daisy dataset are excerpted from copyrighted video materials publicly available on YouTube and Bilibili. The use of these samples is for non-commercial evaluation and research purposes only.
+The audio samples in the Daisy dataset are excerpted from copyrighted video materials publicly available on [YouTube](https://youtube.com) and [Bilibili](https://bilibili.com). The use of these samples is for non-commercial evaluation and research purposes only.
 
 This dataset is made available under the principles of "Fair Use" (United States) and "Fair Dealing" (United Kingdom and other Commonwealth jurisdictions). Specifically:
 
