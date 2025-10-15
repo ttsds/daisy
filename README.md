@@ -1,6 +1,6 @@
 # daisy
 
-[![Tests](https://github.com/Christoph-Minixhofer/daisy/workflows/Tests/badge.svg)](https://github.com/Christoph-Minixhofer/daisy/actions)
+[![Tests](https://github.com/ttsds/daisy/actions/workflows/test.yml/badge.svg)](https://github.com/ttsds/daisy/actions/workflows/test.yml)
 
 ![Flower Plot](figures/flower.png)
 

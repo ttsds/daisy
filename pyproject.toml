@@ -49,12 +49,6 @@ Source = "https://github.com/Christoph-Minixhofer/daisy"
 [tool.hatch.version]
 path = "src/daisy/__about__.py"
 
-[tool.hatch.envs.types]
-extra-dependencies = [
-  "mypy>=1.0.0",
-]
-[tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/daisy tests}"
 [tool.hatch.envs.test]
 dependencies = [
   "pytest>=7.0.0",
