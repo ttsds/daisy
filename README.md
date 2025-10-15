@@ -32,6 +32,8 @@ We only collect a small, but highly diverse set of samples for each language, co
    pip install -e .
    ```
 
+Please note that the package requires Python 3.10 or higher.
+
 ## Usage
 
 This repository contains the code for collecting the dataset, as well as the code for creating the flower plot and other figures quantifying the dataset's diversity.
