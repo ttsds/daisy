@@ -16,17 +16,17 @@ os.makedirs("figures", exist_ok=True)
 
 REPLACE_CHARTS = True
 
-if REPLACE_CHARTS or not os.path.exists("data/figures/llm_sources.png"):
+if REPLACE_CHARTS or not os.path.exists("figures/llm_sources.png"):
     languages = []
     types = []
     counts = []
 
     for language in LANGUAGES:
-        with open(f"data/{language}/podcasts.json", "r", encoding="utf-8") as f:
+        with open(f"{language}/podcasts.json", "r", encoding="utf-8") as f:
             podcasts = json.load(f)
-        with open(f"data/{language}/broadcast_news.json", "r", encoding="utf-8") as f:
+        with open(f"{language}/broadcast_news.json", "r", encoding="utf-8") as f:
             broadcast_news = json.load(f)
-        with open(f"data/{language}/content_creators.json", "r", encoding="utf-8") as f:
+        with open(f"{language}/content_creators.json", "r", encoding="utf-8") as f:
             content_creators = json.load(f)
         languages.append(language)
         types.append("Podcasts")
@@ -72,15 +72,15 @@ if REPLACE_CHARTS or not os.path.exists("data/figures/llm_sources.png"):
     plt.savefig("figures/content_creators.png")
     plt.close()
 
-if REPLACE_CHARTS or not os.path.exists("data/figures/link_results.png"):
+if REPLACE_CHARTS or not os.path.exists("figures/link_results.png"):
     languages = []
     types = []
     counts = []
 
     for language in LANGUAGES:
-        podcasts = glob(f"data/{language}/podcasts/*.json")
-        broadcast_news = glob(f"data/{language}/broadcast_news/*.json")
-        content_creators = glob(f"data/{language}/content_creators/*.json")
+        podcasts = glob(f"{language}/podcasts/*.json")
+        broadcast_news = glob(f"{language}/broadcast_news/*.json")
+        content_creators = glob(f"{language}/content_creators/*.json")
 
         podcasts_count = 0
         for podcast in podcasts:
@@ -178,7 +178,7 @@ def load_filtered_data():
 
     for language in LANGUAGES:
         for category in categories:
-            filtered_files = glob(f"data/{language}/{category}-filtered/*.json")
+            filtered_files = glob(f"{language}/{category}-filtered/*.json")
 
             for file_path in filtered_files:
                 try:

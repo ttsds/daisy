@@ -1,6 +1,7 @@
 import tempfile
 import subprocess
 from typing import Optional
+from glob import glob
 
 import torchaudio
 
@@ -25,21 +26,15 @@ class VideoAudioDownloader(AudioDownloader):
         with tempfile.TemporaryDirectory() as temp_dir:
             if item.parsed_duration is None:
                 item.parsed_duration = int(item.duration)
-            if "bilibili.com" in item.url:
-                audio_format = "m4a"
-            else:
-                audio_format = "flac"
             command = [
                 "yt-dlp",
-                "-f",
-                "(bestaudio)[protocol!*=dash]",
+                # "-f",
+                # "(bestaudio)[protocol!*=dash]",
                 "--external-downloader",
                 "ffmpeg",
                 "--output",
                 f"{temp_dir}/audio.%(ext)s",
                 "--extract-audio",
-                "--audio-format",
-                audio_format,
                 "--audio-quality",
                 "0",
                 "--limit-rate",
@@ -55,6 +50,8 @@ class VideoAudioDownloader(AudioDownloader):
                 item.url,
                 "--cookies",
                 "cookies.txt",
+                "--downloader-args",
+                "ffmpeg_i:-http_persistent 0",
             ]
             if (
                 self.section_length is not None
@@ -81,6 +78,8 @@ class VideoAudioDownloader(AudioDownloader):
                     command,
                     check=True,
                 )
+                audio_path = glob(f"{temp_dir}/audio.*")[0]
+                audio_format = audio_path.split(".")[-1]
             except subprocess.CalledProcessError as e:
                 print(f"Error downloading audio: {e}")
                 return None
