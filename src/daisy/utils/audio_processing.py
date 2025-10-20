@@ -13,9 +13,10 @@ import torchaudio
 from scipy.signal import find_peaks
 from scipy.ndimage import gaussian_filter1d
 from librosa.feature import melspectrogram
+import demucs.api
 
 
-def find_valleys(audio: np.ndarray, sr: int) -> List[int]:
+def find_valleys(audio: np.ndarray, sr: int, valley_sigma: float = 100) -> List[int]:
     """
     Find valleys (silence points) in audio for segmentation.
     
@@ -36,7 +37,7 @@ def find_valleys(audio: np.ndarray, sr: int) -> List[int]:
     duration = len(audio) / 16000
     duration_per_frame = duration / mel_spec.shape[1]
     # smooth the energy
-    energy = gaussian_filter1d(energy, sigma=100)
+    energy = gaussian_filter1d(energy, sigma=valley_sigma)
     valleys = find_peaks(-energy)
     valleys = [valley * duration_per_frame for valley in valleys[0]]
     return valleys
@@ -223,38 +224,12 @@ def wada_snr(wav: np.ndarray) -> float:
 
     return snr
 
+class DemucsProcessor():
+    def __init__(self, device: str = "cpu", model_name: str = "htdemucs"):
+        self.device = device
+        self.model_name = model_name
+        self.model = demucs.api.Separator(model=self.model_name)
 
-def stem_demucs(audio_path: str, device: str = "cpu") -> Tuple[int, np.ndarray]:
-    """
-    Extract vocals from audio using Demucs source separation.
-    
-    Args:
-        audio_path: Path to input audio file
-        device: Device to use for processing ("cpu" or "cuda")
-        
-    Returns:
-        Tuple of (sample_rate, vocals_array)
-    """
-    with TemporaryDirectory() as temp_dir:
-        command = [
-            "python",
-            "-m",
-            "demucs.separate",
-            "-n",
-            "htdemucs",
-            "--two-stems=vocals",
-            audio_path,
-            "-o",
-            temp_dir,
-            "--device",
-            device,
-        ]
-        subprocess.run(command, check=True)
-        vocals_path = os.path.join(
-            temp_dir,
-            "htdemucs",
-            os.path.splitext(os.path.basename(audio_path))[0],
-            "vocals.wav",
-        )
-        vocals, sr = torchaudio.load(vocals_path)
-        return sr, vocals.numpy()[0]
+    def process(self, audio_path: str) -> Tuple[np.ndarray, int]:
+        result = self.model.separate_audio_file(audio_path)[1]["vocals"]
+        return result.numpy()[0], self.model.samplerate

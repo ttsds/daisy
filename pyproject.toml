@@ -45,12 +45,13 @@ dependencies = [
   "nemo-toolkit[asr]>="2.dev",
   "demucs>=4.0.0",
   "omegaconf>=2.0.0",
+  "faster-whisper>=1.0.0",
 ]
 
 [project.urls]
-Documentation = "https://github.com/Christoph-Minixhofer/daisy#readme"
-Issues = "https://github.com/Christoph-Minixhofer/daisy/issues"
-Source = "https://github.com/Christoph-Minixhofer/daisy"
+Documentation = "https://github.com/ttsds/daisy#readme"
+Issues = "https://github.com/ttsds/daisy/issues"
+Source = "https://github.com/ttsds/daisy"
 
 [tool.hatch.version]
 path = "src/daisy/__about__.py"

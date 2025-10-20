@@ -6,10 +6,12 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional
 import os
 import json
-import soundfile
 from multiprocessing import Pool, cpu_count
 from functools import partial
+
+import soundfile
 from tqdm import tqdm
+import numpy as np
 
 from .models import MediaItem, AudioItem, DownloadItem, LANGUAGES
 
@@ -362,3 +364,11 @@ class ListSource(ABC):
             result_items.append(MediaItem(**item_data))
 
         return result_items
+
+class ASRModel(ABC):
+    def __init__(self, model_id: str):
+        self.model_id = model_id
+
+    @abstractmethod
+    def transcribe(self, audio: np.ndarray, sr: int) -> str:
+        pass

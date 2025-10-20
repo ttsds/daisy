@@ -31,11 +31,11 @@ from .processing import (
     NeuralDiarizer,
     ClusteringDiarizer,
 )
-from .processing import create_utterances
+from .processing import SpeakerExtractor
 from .utils import (
     find_valleys,
     wada_snr,
-    stem_demucs,
+    DemucsProcessor,
 )
 
 __version__ = "0.0.1"
@@ -67,9 +67,9 @@ __all__ = [
     "NeuralDiarizer",
     "ClusteringDiarizer",
     # Utterance pipeline
-    "create_utterances",
+    "SpeakerExtractor",
     # Audio processing utilities
     "find_valleys",
     "wada_snr",
-    "stem_demucs",
+    "DemucsProcessor",
 ]

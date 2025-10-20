@@ -85,6 +85,29 @@ class MediaItemList(BaseModel):
 
     items: list[MediaItem]
 
+class Utterance(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    identifier: str
+    audio: np.ndarray
+    sr: int
+    snr: float
+    similarity: float
+    duration: float
+    texts: list[str]
+    audio_item_id: str
+    text: Optional[str] = None
+
+class SimpleUtterance(BaseModel):
+    identifier: str
+    text: str
+
+class UtteranceList(BaseModel):
+    items: list[SimpleUtterance]
+
+class Speaker(BaseModel):
+    identifier: str
+    name: str
+    utterances: list[Utterance]
 
 # Load language definitions
 with resources.path("daisy.config", "languages.json") as path:
