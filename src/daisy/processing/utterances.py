@@ -94,7 +94,7 @@ class SpeakerExtractor():
                 model=self.llm_id,
                 messages=messages,
                 response_format=response_format,
-            ).response.choices[0].message.parsed
+            ).choices[0].message.parsed
         else:
             return self.client.chat.completions.create(
                 model=self.llm_id,
