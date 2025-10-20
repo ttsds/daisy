@@ -1,3 +1,7 @@
+"""
+Sampling and language detection for audio items.
+"""
+
 from typing import List, Optional
 
 import pandas as pd
@@ -6,7 +10,7 @@ import fasttext
 from huggingface_hub import hf_hub_download
 import random
 
-from daisy.abstract import FilterResult, MediaItem, AudioItem, FullItem, LANGUAGES
+from daisy.core import FilterResult, MediaItem, AudioItem, FullItem, LANGUAGES
 
 # map for non-standard fasttext language codes
 FASTTEXT_MAP = {

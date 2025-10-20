@@ -16,8 +16,8 @@ from datetime import datetime, timedelta
 
 import rich.progress
 
-from daisy.audio_sources import YouTubeAudioSource, BilibiliAudioSource
-from daisy.abstract import LANGUAGES, MediaItem
+from daisy.sources.audio import YouTubeAudioSource, BilibiliAudioSource
+from daisy.core import LANGUAGES, MediaItem
 from dotenv import load_dotenv
 
 

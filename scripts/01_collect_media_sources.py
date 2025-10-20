@@ -12,12 +12,12 @@ Usage:
 
 import os
 import rich
-from daisy.media_sources import (
+from daisy.sources.media import (
     LLMPodcastSource,
     LLMBroadcastNewsSource,
     LLMContentCreatorSource,
 )
-from daisy.abstract import LANGUAGES
+from daisy.core import LANGUAGES
 from dotenv import load_dotenv
 
 

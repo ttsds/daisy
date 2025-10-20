@@ -1,3 +1,7 @@
+"""
+Audio downloading functionality.
+"""
+
 import tempfile
 import subprocess
 from typing import Optional
@@ -5,8 +9,7 @@ from glob import glob
 
 import torchaudio
 
-
-from daisy.abstract import AudioDownloader, AudioItem, DownloadItem
+from daisy.core import AudioDownloader, AudioItem, DownloadItem
 
 
 class VideoAudioDownloader(AudioDownloader):
@@ -21,6 +24,7 @@ class VideoAudioDownloader(AudioDownloader):
             save_dir, overwrite, ["youtube.com", "bilibili.com"], max_workers
         )
         self.section_length = section_length
+        self.errors_without_success = 0
 
     def download(self, item: AudioItem) -> DownloadItem:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -37,8 +41,8 @@ class VideoAudioDownloader(AudioDownloader):
                 "--extract-audio",
                 "--audio-quality",
                 "0",
-                "--limit-rate",
-                "500K",
+                # "--limit-rate",
+                # "500K",
                 "--retries",
                 "10",
                 "--fragment-retries",
@@ -50,8 +54,12 @@ class VideoAudioDownloader(AudioDownloader):
                 item.url,
                 "--cookies",
                 "cookies.txt",
-                "--downloader-args",
-                "ffmpeg_i:-http_persistent 0",
+                # "--downloader-args",
+                # "ffmpeg_i:-http_persistent 0",
+                "--min-sleep-interval",
+                "1",
+                "--max-sleep-interval",
+                "2",
             ]
             if (
                 self.section_length is not None
@@ -80,11 +88,22 @@ class VideoAudioDownloader(AudioDownloader):
                 )
                 audio_path = glob(f"{temp_dir}/audio.*")[0]
                 audio_format = audio_path.split(".")[-1]
+                self.errors_without_success = 0
             except subprocess.CalledProcessError as e:
                 print(f"Error downloading audio: {e}")
+                self.errors_without_success += 1
+                if self.errors_without_success > 20:
+                    raise ValueError("Too many errors without success")
                 return None
-            audio, sr = torchaudio.load(f"{temp_dir}/audio.{audio_format}")
-            audio = audio.numpy()[0]
+            try:
+                audio, sr = torchaudio.load(f"{temp_dir}/audio.{audio_format}")
+                audio = audio.numpy()[0]
+            except Exception as e:
+                print(f"Error loading audio: {e}")
+                self.errors_without_success += 1
+                if self.errors_without_success > 20:
+                    raise ValueError("Too many errors without success")
+                return None
             return DownloadItem(
                 sr=sr,
                 audio=audio,

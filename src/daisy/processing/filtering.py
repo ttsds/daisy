@@ -1,9 +1,13 @@
+"""
+LLM-based filtering of audio items.
+"""
+
 import os
 from json import JSONDecodeError
 
 import openai
 
-from daisy.abstract import (
+from daisy.core import (
     FilterResult,
     FilterResultList,
     MediaItem,

@@ -17,8 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from tabulate import tabulate
 
-from daisy.downloaders import VideoAudioDownloader
-from daisy.abstract import AudioItem, LANGUAGES
+from daisy.download import VideoAudioDownloader
+from daisy.core import AudioItem, LANGUAGES
 from dotenv import load_dotenv
 
 
@@ -97,12 +97,6 @@ class DownloadMonitor:
                 progress_data[language] = count
 
             self.write_progress_log(progress_data)
-
-            # Clear screen and display table in console
-            os.system("clear" if os.name == "posix" else "cls")
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"Download Progress - {timestamp}")
-            print("=" * 50)
 
             # Prepare table data for console
             table_data = []
@@ -191,7 +185,7 @@ def main():
             audio_items = load_audio_items(language)
             print(f"Found {len(audio_items)} audio items to download")
             downloader.collect(
-                audio_items, use_multiprocessing=True, show_progress=True
+                audio_items, use_multiprocessing=False, show_progress=True
             )
 
         print("\nStage 5 completed! Samples downloaded for all languages.")
