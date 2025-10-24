@@ -23,6 +23,7 @@ class Language(ABC):
     iso3: str
     english_name: str
     native_name: str
+    mms_code: Optional[str] = None
 
 
 class FilterResult(BaseModel):

@@ -60,7 +60,8 @@ class SpeakerExtractor():
             "remove_singleton_speakers": True,
             "diarizer_type": "neural",
             "demucs_model_name": "htdemucs",
-            "filter_llm_model": "x-ai/grok-4-fast"
+            "filter_llm_model": "x-ai/grok-4-fast",
+            "max_consecutive_failures": 3,
         }
         self.kwargs = {**default_kwargs, **kwargs}
 
@@ -83,6 +84,8 @@ class SpeakerExtractor():
             api_key=os.getenv("OPENROUTER_KEY"),
         )
         self.llm_id = self.kwargs["filter_llm_model"]
+        self.consecutive_failures = 0
+        self.max_consecutive_failures = self.kwargs["max_consecutive_failures"]
 
     @llm_api_retry(max_retries=3, base_delay=1.0, max_delay=30.0)
     def _make_llm_request(self, messages: list, response_format=None):
@@ -111,168 +114,182 @@ class SpeakerExtractor():
         if os.path.exists(output_dir):
             return
 
-        audio_item_id = audio_path.split("/")[-1].split(".")[0]
-        video_info = pd.read_csv(os.path.dirname(audio_path).replace("/samples", "/sampled_items.csv"))
-        video_info = video_info[video_info["audio_item_id"] == audio_item_id]
-        video_name = video_info["channel_name"].values[0]
-        video_title = video_info["title"].values[0]
+        os.makedirs(output_dir, exist_ok=True)
 
-        
-        audio, sr = self.demucs.process(audio_path)
+        try:
+            audio_item_id = audio_path.split("/")[-1].split(".")[0]
+            video_info = pd.read_csv(os.path.dirname(audio_path).replace("/samples", "/sampled_items.csv"))
+            video_info = video_info[video_info["audio_item_id"] == audio_item_id]
+            video_name = video_info["channel_name"].values[0]
+            video_title = video_info["title"].values[0]
 
-        diarization = self.diarizer.diarize(sr, audio)
-        
-        speaker_segments = self._get_segments(audio, sr, diarization)
-
-        speaker_embeddings = {}
-        segment_embeddings = {}
-        segment_id = 0
-        for speaker, segments in sorted(speaker_segments.items()):
-            speaker_embeddings[speaker] = []
-            for segment in segments:
-                audio_embedding, _ = self.speaker_model.infer_segment(segment)
-                audio_embedding = audio_embedding.squeeze(0).cpu().numpy()
-                segment_embeddings[segment_id] = audio_embedding
-                segment_id += 1
-                speaker_embeddings[speaker].append(audio_embedding)
-            speaker_embeddings[speaker] = np.stack(speaker_embeddings[speaker])
-            mean_embedding = speaker_embeddings[speaker].mean(axis=0)
-            speaker_embeddings[speaker] = mean_embedding.reshape(1, -1)
-
-        # update the speaker keys to be the humanhash of the mean speaker embedding
-        id2embedding = {}
-        skip_speakers = []
-        for speaker, embedding in speaker_embeddings.items():
-            mean_embedding = embedding.mean(axis=0)
-            speaker_name = f"{audio_item_id}_{speaker}"
-            if os.path.exists(os.path.join(self.output_dir, speaker_name)):
-                skip_speakers.append(speaker)
-                continue
-            id2embedding[speaker] = humanize(sha256(speaker_name.encode()).hexdigest()).replace("-", "_")
-        speaker_segments = {id2embedding[speaker]: segments for speaker, segments in speaker_segments.items()}
-        speaker_embeddings = {id2embedding[speaker]: embeddings for speaker, embeddings in speaker_embeddings.items()}
-
-        segment_attributes = {}
-        segment_id = 0
-        for speaker, segments in sorted(speaker_segments.items()):
-            if speaker in skip_speakers:
-                continue
-            for segment in segments:
-                attributes = self._get_attributes(segment, sr, segment_embeddings[segment_id], speaker_embeddings[speaker])
-                segment_attributes[segment_id] = attributes
-                segment_id += 1
-
-        speaker_utterances = {}
-        segment_id = 0
-        for speaker, segments in sorted(speaker_segments.items()):
-            if speaker in skip_speakers:
-                continue
-            speaker_utterances[speaker] = []
-            for segment in segments:
-                attributes = segment_attributes[segment_id]
-                if (attributes["similarity"] > self.kwargs["min_similarity"] 
-                    and attributes["snr"] > self.kwargs["min_snr"] 
-                    and attributes["duration"] > self.kwargs["min_duration"] 
-                    and attributes["duration"] < self.kwargs["max_duration"]
-                ):
-                    whisper_transcript = self.whisper.transcribe(segment, sr)
-                    mms_transcript = self.mms.transcribe(segment, sr)
-                    speaker_utterances[speaker].append(Utterance(
-                        identifier=f"{speaker}_{segment_id}",
-                        audio=segment,
-                        sr=sr,
-                        texts=[whisper_transcript, mms_transcript],
-                        similarity=attributes["similarity"],
-                        snr=attributes["snr"],
-                        duration=attributes["duration"],
-                        audio_item_id=audio_path.split("/")[-1].split(".")[0],
-                    ))
-                segment_id += 1
-
-        # sample 10 utterances per speaker if there are more than 10, drop speakers with less than 2 utterances
-        del_speakers = []
-        for speaker, utterances in speaker_utterances.items():
-            if speaker in skip_speakers:
-                continue
-            if len(utterances) > 10:
-                random.seed(42)
-                utterances = random.sample(utterances, 10)
-            elif len(utterances) < 2:
-                del_speakers.append(speaker)
-        for speaker in del_speakers:
-            del speaker_utterances[speaker]
-        
-        for speaker in speaker_utterances.keys():
-            if speaker in skip_speakers:
-                continue
-            linebreak = "\n"
-            prompt = f"""
-            There will be a list of utterances for a speaker and their transcripts.
-            You need to filter the utterances based on the transcripts, and correct the transcripts if necessary.
-            Transcripts containing controversial content should be dropped, meaning content that is likely to be offensive or harmful.
-            The language is {LANGUAGES[self.language].english_name}, if the majority of a transcript is not in this language, it should be dropped.
-            For additional context, the utterances are extracted from a source video, which is by '{video_name}' and the title is '{video_title}'.
             
-            The transcripts are:
-            {linebreak.join([f"Id: {utt.identifier}; Transcript 1: '{utt.texts[0]}'; Transcript 2: '{utt.texts[1]}'" for utt in speaker_utterances[speaker]])}
+            audio, sr = self.demucs.process(audio_path)
+
+            try:
+                diarization = self.diarizer.diarize(sr, audio)
+            # index and value error
+            except (IndexError, ValueError) as e:
+                print(f"Error diarizing audio: {e}")
+                return
             
-            Return the two most representative transcripts for the speaker, which should be useful for subjective evaluation (human listening test).
+            speaker_segments = self._get_segments(audio, sr, diarization)
 
-            Here is an example:
-            Input:
-            Id: kangaroo_flower_mountain_flow_1; Transcript 1: 'this is a test'; Transcript 2: 'This is test.'
-            ...
-            Output:
-            I decided to keep kangaroo_flower_mountain_flow_1 and correct its transcript to 'This is a test.'
-            The second transcript I decided to keep is ...
+            speaker_embeddings = {}
+            segment_embeddings = {}
+            segment_id = 0
+            for speaker, segments in sorted(speaker_segments.items()):
+                speaker_embeddings[speaker] = []
+                for segment in segments:
+                    audio_embedding, _ = self.speaker_model.infer_segment(segment)
+                    audio_embedding = audio_embedding.squeeze(0).cpu().numpy()
+                    segment_embeddings[segment_id] = audio_embedding
+                    segment_id += 1
+                    speaker_embeddings[speaker].append(audio_embedding)
+                speaker_embeddings[speaker] = np.stack(speaker_embeddings[speaker])
+                mean_embedding = speaker_embeddings[speaker].mean(axis=0)
+                speaker_embeddings[speaker] = mean_embedding.reshape(1, -1)
 
-            Remember: You can also decide to not keep any of the transcripts, if none are appropriate.
-            """
+            # update the speaker keys to be the humanhash of the mean speaker embedding
+            id2embedding = {}
+            skip_speakers = []
+            for speaker, embedding in speaker_embeddings.items():
+                mean_embedding = embedding.mean(axis=0)
+                speaker_name = f"{audio_item_id}_{speaker}"
+                if os.path.exists(os.path.join(self.output_dir, speaker_name)):
+                    skip_speakers.append(speaker)
+                    continue
+                id2embedding[speaker] = humanize(sha256(speaker_name.encode()).hexdigest()).replace("-", "_")
+            speaker_segments = {id2embedding[speaker]: segments for speaker, segments in speaker_segments.items()}
+            speaker_embeddings = {id2embedding[speaker]: embeddings for speaker, embeddings in speaker_embeddings.items()}
 
+            segment_attributes = {}
+            segment_id = 0
+            for speaker, segments in sorted(speaker_segments.items()):
+                if speaker in skip_speakers:
+                    continue
+                for segment in segments:
+                    attributes = self._get_attributes(segment, sr, segment_embeddings[segment_id], speaker_embeddings[speaker])
+                    segment_attributes[segment_id] = attributes
+                    segment_id += 1
 
-            response = self._make_llm_request(
-                messages=[{"role": "user", "content": prompt}]
-            )
+            speaker_utterances = {}
+            segment_id = 0
+            for speaker, segments in sorted(speaker_segments.items()):
+                if speaker in skip_speakers:
+                    continue
+                speaker_utterances[speaker] = []
+                for segment in segments:
+                    attributes = segment_attributes[segment_id]
+                    if (attributes["similarity"] > self.kwargs["min_similarity"] 
+                        and attributes["snr"] > self.kwargs["min_snr"] 
+                        and attributes["duration"] > self.kwargs["min_duration"] 
+                        and attributes["duration"] < self.kwargs["max_duration"]
+                    ):
+                        whisper_transcript = self.whisper.transcribe(segment, sr)
+                        mms_transcript = self.mms.transcribe(segment, sr)
+                        speaker_utterances[speaker].append(Utterance(
+                            identifier=f"{speaker}_{segment_id}",
+                            audio=segment,
+                            sr=sr,
+                            texts=[whisper_transcript, mms_transcript],
+                            similarity=attributes["similarity"],
+                            snr=attributes["snr"],
+                            duration=attributes["duration"],
+                            audio_item_id=audio_path.split("/")[-1].split(".")[0],
+                        ))
+                    segment_id += 1
+
+            # sample 10 utterances per speaker if there are more than 10, drop speakers with less than 2 utterances
+            del_speakers = []
+            for speaker, utterances in speaker_utterances.items():
+                if speaker in skip_speakers:
+                    continue
+                if len(utterances) > 10:
+                    random.seed(42)
+                    utterances = random.sample(utterances, 10)
+                elif len(utterances) < 2:
+                    del_speakers.append(speaker)
+            for speaker in del_speakers:
+                del speaker_utterances[speaker]
             
-            prompt = f"""
-            Take the following unstructured response and return a list of SimpleUtterance objects, which have the following fields:
-            - identifier: str
-            - text: str
-            The response is:
-            {response}
-            If there are no transcripts to keep, return an empty list.
-            """
+            for speaker in speaker_utterances.keys():
+                if speaker in skip_speakers:
+                    continue
+                linebreak = "\n"
+                prompt = f"""
+                There will be a list of utterances for a speaker and their transcripts.
+                You need to filter the utterances based on the transcripts, and correct the transcripts if necessary.
+                Transcripts containing controversial content should be dropped, meaning content that is likely to be offensive or harmful.
+                The language is {LANGUAGES[self.language].english_name}, if the majority of a transcript is not in this language, it should be dropped.
+                For additional context, the utterances are extracted from a source video, which is by '{video_name}' and the title is '{video_title}'.
+                
+                The transcripts are:
+                {linebreak.join([f"Id: {utt.identifier}; Transcript 1: '{utt.texts[0]}'; Transcript 2: '{utt.texts[1]}'" for utt in speaker_utterances[speaker]])}
+                
+                Return the two most representative transcripts for the speaker, which should be useful for subjective evaluation (human listening test).
 
-            response = self._make_llm_request(
-                messages=[{"role": "user", "content": prompt}],
-                response_format=UtteranceList
-            )
-            if len(response.items) == 0:
-                continue
-            
-            save_utterances = []
-            for item in response.items:
-                for utterance in speaker_utterances[speaker]:
-                    if utterance.identifier == item.identifier:
-                        utterance.text = item.text
-                        save_utterances.append(utterance)
-            speaker_utterances[speaker] = save_utterances
+                Here is an example:
+                Input:
+                Id: kangaroo_flower_mountain_flow_1; Transcript 1: 'this is a test'; Transcript 2: 'This is test.'
+                ...
+                Output:
+                I decided to keep kangaroo_flower_mountain_flow_1 and correct its transcript to 'This is a test.'
+                The second transcript I decided to keep is ...
 
-            os.makedirs(os.path.join(output_dir, speaker), exist_ok=True)
-            for utterance in save_utterances:
-                torchaudio.save(os.path.join(output_dir, speaker, f"{utterance.identifier}.wav"), torch.from_numpy(utterance.audio).unsqueeze(0), utterance.sr)
-                with open(os.path.join(output_dir, speaker, f"{utterance.identifier}.txt"), "w", encoding="utf-8") as f:
-                    f.write(utterance.text)
-                with open(os.path.join(output_dir, speaker, f"{utterance.identifier}.json"), "w", encoding="utf-8") as f:
-                    json_output = {}
-                    json_output["identifier"] = utterance.identifier
-                    json_output["texts"] = utterance.texts + [utterance.text]
-                    json_output["snr"] = utterance.snr
-                    json_output["similarity"] = utterance.similarity
-                    json_output["duration"] = utterance.duration
-                    json_output["audio_item_id"] = audio_item_id
-                    json.dump(json_output, f, ensure_ascii=False, indent=2)
-                    
+                Remember: You can also decide to not keep any of the transcripts, if none are appropriate.
+                """
+
+
+                response = self._make_llm_request(
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                
+                prompt = f"""
+                Take the following unstructured response and return a list of SimpleUtterance objects, which have the following fields:
+                - identifier: str
+                - text: str
+                The response is:
+                {response}
+                If there are no transcripts to keep, return an empty list.
+                """
+
+                response = self._make_llm_request(
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format=UtteranceList
+                )
+                if len(response.items) == 0:
+                    continue
+                
+                save_utterances = []
+                for item in response.items:
+                    for utterance in speaker_utterances[speaker]:
+                        if utterance.identifier == item.identifier:
+                            utterance.text = item.text
+                            save_utterances.append(utterance)
+                speaker_utterances[speaker] = save_utterances
+
+                os.makedirs(os.path.join(output_dir, speaker), exist_ok=True)
+                for utterance in save_utterances:
+                    torchaudio.save(os.path.join(output_dir, speaker, f"{utterance.identifier}.wav"), torch.from_numpy(utterance.audio).unsqueeze(0), utterance.sr)
+                    with open(os.path.join(output_dir, speaker, f"{utterance.identifier}.txt"), "w", encoding="utf-8") as f:
+                        f.write(utterance.text)
+                    with open(os.path.join(output_dir, speaker, f"{utterance.identifier}.json"), "w", encoding="utf-8") as f:
+                        json_output = {}
+                        json_output["identifier"] = utterance.identifier
+                        json_output["texts"] = utterance.texts + [utterance.text]
+                        json_output["snr"] = utterance.snr
+                        json_output["similarity"] = utterance.similarity
+                        json_output["duration"] = utterance.duration
+                        json_output["audio_item_id"] = audio_item_id
+                        json.dump(json_output, f, ensure_ascii=False, indent=2)
+            self.consecutive_failures = 0
+        except Exception as e:
+            self.consecutive_failures += 1
+            if self.consecutive_failures >= self.max_consecutive_failures:
+                raise e
+            print(f"Error extracting speakers: {e}")
+            return
 
     def _get_segments(
         self,
@@ -326,3 +343,9 @@ class SpeakerExtractor():
             "snr": snr,
             "similarity": similarity,
         }
+
+    def set_language(self, language: str) -> None:
+        self.mms.set_language(language)
+
+    def set_output_dir(self, output_dir: str) -> None:
+        self.output_dir = output_dir

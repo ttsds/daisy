@@ -26,6 +26,7 @@
     {
         "iso2": "az",
         "iso3": "aze",
+        "mms_code": "azj-script_latin",
         "english_name": "Azerbaijani",
         "native_name": "azərbaycan dili"
     },
@@ -63,13 +64,15 @@
         "iso2": "yue-cn",
         "iso3": "yue",
         "english_name": "Cantonese (China)",
-        "native_name": "廣東話"
+        "native_name": "廣東話",
+        "mms_code": "yue-script_traditional"
     },
     {
         "iso2": "yue-hk",
         "iso3": "yue",
         "english_name": "Cantonese (Hong Kong)",
-        "native_name": "廣東話"
+        "native_name": "廣東話",
+        "mms_code": "yue-script_traditional"
     },
     {
         "iso2": "ca",
@@ -81,13 +84,15 @@
         "iso2": "cmn-cn",
         "iso3": "cmn",
         "english_name": "Mandarin (China)",
-        "native_name": "普通话"
+        "native_name": "普通话",
+        "mms_code": "cmn-script_simplified"
     },
     {
         "iso2": "cmn-tw",
         "iso3": "cmn",
         "english_name": "Mandarin (Taiwan)",
-        "native_name": "國語"
+        "native_name": "國語",
+        "mms_code": "cmn-script_simplified"
     },
     {
         "iso2": "hr",
@@ -129,7 +134,8 @@
         "iso2": "fil",
         "iso3": "fil",
         "english_name": "Filipino",
-        "native_name": "Filipino"
+        "native_name": "Filipino",
+        "mms_code": "tgl"
     },
     {
         "iso2": "fi",
@@ -249,7 +255,8 @@
         "iso2": "ms",
         "iso3": "msa",
         "english_name": "Malay",
-        "native_name": "bahasa Melayu"
+        "native_name": "bahasa Melayu",
+        "mms_code": "zlm"
     },
     {
         "iso2": "ml",
@@ -273,25 +280,29 @@
         "iso2": "ne",
         "iso3": "nep",
         "english_name": "Nepali",
-        "native_name": "नेपाली"
+        "native_name": "नेपाली",
+        "mms_code": "npi"
     },
     {
         "iso2": "no",
         "iso3": "nor",
         "english_name": "Norwegian",
-        "native_name": "norsk"
+        "native_name": "norsk",
+        "mms_code": "nob"
     },
     {
         "iso2": "nn",
         "iso3": "nno",
         "english_name": "Nynorsk",
-        "native_name": "norsk nynorsk"
+        "native_name": "norsk nynorsk",
+        "mms_code": "nno"
     },
     {
         "iso2": "or",
         "iso3": "ori",
         "english_name": "Odia",
-        "native_name": "ଓଡ଼ିଆ"
+        "native_name": "ଓଡ଼ିଆ",
+        "mms_code": "ory"
     },
     {
         "iso2": "fa",
@@ -333,7 +344,8 @@
         "iso2": "sr",
         "iso3": "srp",
         "english_name": "Serbian",
-        "native_name": "српски језик"
+        "native_name": "српски језик",
+        "mms_code": "srp-script_cyrillic"
     },
     {
         "iso2": "sk",
@@ -357,7 +369,8 @@
         "iso2": "sw",
         "iso3": "swa",
         "english_name": "Swahili",
-        "native_name": "Kiswahili"
+        "native_name": "Kiswahili",
+        "mms_code": "swh"
     },
     {
         "iso2": "sv",
@@ -399,7 +412,8 @@
         "iso2": "ur",
         "iso3": "urd",
         "english_name": "Urdu",
-        "native_name": "اردو"
+        "native_name": "اردو",
+        "mms_code": "urd-script_arabic"
     },
     {
         "iso2": "vi",

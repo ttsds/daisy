@@ -153,19 +153,24 @@ class MMSASRModel(ASRModel):
         self.model = Wav2Vec2ForCTC.from_pretrained(f"facebook/mms-1b-all")
         
         # Set target language and load adapter
-        language = LANGUAGES[language].iso3
         self.set_language(language)
     
-    def set_language(self, language_code: str) -> None:
+    def set_language(self, language: str) -> None:
         """
         Switch the model to a different language.
-        
+            
         Args:
-            language_code: ISO 639-3 language code (e.g., "eng", "fra", "spa")
+            language: ISO 639-2 language code (e.g., "en", "fr", "es")
         """
+        language_code = LANGUAGES[language].mms_code
+        if language_code is None or language_code == "None":
+            language_code = LANGUAGES[language].iso3
         self.target_language = language_code
-        self.processor.tokenizer.set_target_lang(language_code)
-        self.model.load_adapter(language_code)
+        self.processor.tokenizer.set_target_lang(self.target_language)
+        self.model.load_adapter(self.target_language)
+
+    def set_output_dir(self, output_dir: str) -> None:
+        self.output_dir = output_dir
     
     def transcribe(self, audio: np.ndarray, sr: int) -> str:
         """

@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+"""
+Create flower plot visualization for DAISY pipeline.
+Shows language distribution and country diversity in a circular flower plot.
+"""
+
+import os
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes._base import _AxesBase
@@ -5,12 +13,12 @@ from matplotlib.patches import Ellipse, Circle
 import pandas as pd
 import matplotlib.font_manager as fm
 import matplotlib
-import os
 import warnings
 import logging
 
-from daisy.abstract import LANGUAGES
-
+# Import utils first to set up the path
+from utils import setup_figure_environment, should_recreate_plots, get_language_data_path, save_figure
+from daisy.core import LANGUAGES
 
 def calc_point_on_circle(
     i: int, slice: float, radius: float, center: (float, float) = (0, 0)
@@ -29,17 +37,14 @@ def calc_point_on_circle(
     new_y = center[1] + radius * np.sin(angle)
     return new_x, new_y
 
-
 calculate_angle = lambda i, n_slices: 360 / n_slices * i
 autorotate_angle = lambda angle: angle - 180 if 90 < angle < 270 else angle
 autoalign_text = lambda angle: "right" if 90 < angle < 270 else "left"
-
 
 def validate_data(genome: str, data: dict) -> None:
     for key in ["color", "shell", "unique"]:
         if key not in data:
             raise KeyError(f"Genome {genome} is missing attribute {key}!")
-
 
 def flower_plot(
     genome_to_data: dict[str:dict],
@@ -166,7 +171,6 @@ def flower_plot(
 
     return ax
 
-
 # Configure matplotlib to use fonts that support more Unicode scripts
 def configure_matplotlib_fonts():
     """Configure matplotlib to use fonts that support various Unicode scripts"""
@@ -175,58 +179,35 @@ def configure_matplotlib_fonts():
     warnings.filterwarnings("ignore")
     logging.getLogger("matplotlib").setLevel(logging.ERROR)
 
-    # Get available fonts
-    available_fonts = [f.name for f in fm.fontManager.ttflist]
+    # Get available fonts (with timeout protection)
+    try:
+        available_fonts = [f.name for f in fm.fontManager.ttflist]
+    except Exception as e:
+        print(f"Warning: Could not get font list: {e}")
+        available_fonts = []
 
-    # Create a comprehensive font fallback list that prioritizes general fonts
+    # Create a simple font fallback list
     font_fallback = []
 
-    # Start with general Unicode-supporting fonts that can handle multiple scripts
-    general_fonts = [
-        "Noto Sans",  # General Noto Sans supports many scripts
-        "Arial Unicode MS",  # Excellent Unicode support
-        "DejaVu Sans",  # Good Unicode support
+    # Start with basic fonts that are likely to be available
+    basic_fonts = [
+        "DejaVu Sans",  # Good Unicode support, commonly available
         "Liberation Sans",  # Good Unicode support
-        "Lucida Grande",  # macOS system font with Unicode
-        "Segoe UI",  # Windows system font with Unicode
-        "Tahoma",  # Good Unicode support
-        "Verdana",  # Basic Unicode support
+        "Arial",  # Basic Unicode support
+        "Helvetica",  # Basic Unicode support
+        "sans-serif",  # System default
     ]
 
-    # Add general fonts first
-    for font in general_fonts:
+    # Add fonts that are available
+    for font in basic_fonts:
         if font in available_fonts and font not in font_fallback:
             font_fallback.append(font)
 
-    # Add script-specific Noto fonts as additional fallbacks
-    script_fonts = [
-        "Noto Sans Devanagari",
-        "Noto Sans Bengali",
-        "Noto Sans Tamil",
-        "Noto Sans Telugu",
-        "Noto Sans Kannada",
-        "Noto Sans Malayalam",
-        "Noto Sans Gujarati",
-        "Noto Sans Oriya",
-        "Noto Sans Gurmukhi",
-        "Noto Sans CJK",
-        "Noto Sans Arabic",
-        "Noto Sans Thai",
-        "Noto Sans Korean",
-        "Noto Sans Hebrew",
-        "Noto Sans Armenian",
-    ]
-
-    for font in script_fonts:
-        if font in available_fonts and font not in font_fallback:
-            font_fallback.append(font)
-
-    # Configure matplotlib with the comprehensive fallback list
+    # Configure matplotlib with the fallback list
     if font_fallback:
         plt.rcParams["font.family"] = font_fallback[0]
         plt.rcParams["font.sans-serif"] = font_fallback
         print(f"Using primary font: {font_fallback[0]}")
-        print(f"Font fallback chain: {font_fallback[:5]}...")
     else:
         plt.rcParams["font.family"] = "sans-serif"
         print("Using system default sans-serif")
@@ -235,52 +216,66 @@ def configure_matplotlib_fonts():
     plt.rcParams["axes.unicode_minus"] = False
     plt.rcParams["figure.max_open_warning"] = 0
 
-
-# Configure fonts before creating plots
-configure_matplotlib_fonts()
-
-
 def create_flower_plot():
     """Create the flower plot with proper font handling"""
 
     flower_plots = {}
+    processed_count = 0
+    skipped_count = 0
 
-    for language in LANGUAGES:
+    print(f"Processing {len(LANGUAGES)} languages...")
+    
+    for i, language in enumerate(LANGUAGES):
         try:
             language_name = LANGUAGES[language].native_name
-            df = pd.read_csv(f"data/{language}/sampled_items.csv")
-            color = (len(df) / 100) * 0.5 + 0.5
+            lang_path = get_language_data_path(language)
+            csv_path = os.path.join(lang_path, "sampled_items.csv")
+            
+            if not os.path.exists(csv_path):
+                print(f"Warning: No data found for language {language} ({language_name})")
+                skipped_count += 1
+                continue
+                
+            df = pd.read_csv(csv_path)
+            
+            if len(df) == 0:
+                print(f"Warning: Empty data for language {language} ({language_name})")
+                skipped_count += 1
+                continue
+            
+            color = min((len(df) / 100) * 0.5 + 0.5, 1.0)  # Cap color at 1.0
             flower_plots[language_name] = {
-                "color": (
-                    color,
-                    color,
-                    color,
-                ),
+                "color": (color, color, color),
                 "shell": len(df),
                 "unique": str(len(df["country"].unique())),
             }
-        except FileNotFoundError:
-            print(f"Warning: No data found for language {language}")
-            continue
+            processed_count += 1
+            
+            # Progress indicator
+            if (i + 1) % 10 == 0:
+                print(f"Processed {i + 1}/{len(LANGUAGES)} languages...")
+                
         except Exception as e:
             print(f"Error processing language {language}: {e}")
+            skipped_count += 1
             continue
 
+    print(f"Successfully processed {processed_count} languages, skipped {skipped_count}")
+    
     if not flower_plots:
         print("No data available to create flower plot")
         return
 
     try:
+        print(f"Creating flower plot with {len(flower_plots)} languages...")
+        
         # Create the flower plot
         flower_plot(
             genome_to_data=flower_plots,
-            n_core=str(len(LANGUAGES)) + " languages",
+            n_core=str(len(flower_plots)) + " languages",
             core_color=(0.9, 0.9, 0),
             alpha=1.0,
         )
-
-        # Ensure the figures directory exists
-        os.makedirs("figures", exist_ok=True)
 
         # Save with high DPI and proper encoding
         plt.tight_layout()
@@ -288,15 +283,7 @@ def create_flower_plot():
         # Save with additional warning suppression
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            plt.savefig(
-                "figures/flower.png",
-                dpi=800,
-                bbox_inches="tight",
-                edgecolor="none",
-                transparent=True,
-            )
-
-        plt.close()
+            save_figure("flower.png", dpi=800, bbox_inches="tight")
 
         print("Flower plot saved successfully to figures/flower.png")
 
@@ -305,6 +292,28 @@ def create_flower_plot():
         print("This might be due to missing fonts or other issues.")
         print("Try running: python install_fonts.py")
 
+def main():
+    """Main function to create flower plot."""
+    print("DAISY Pipeline Flower Plot Creation")
+    print("=" * 40)
+    
+    # Set up environment
+    setup_figure_environment()
+    
+    # Ask user about recreating plots
+    recreate_plots = should_recreate_plots()
+    
+    if not recreate_plots:
+        print("Skipping flower plot creation.")
+        return
+    
+    # Configure fonts before creating plots
+    configure_matplotlib_fonts()
+    
+    # Create flower plot
+    create_flower_plot()
+    
+    print("\nFlower plot creation complete!")
 
 if __name__ == "__main__":
-    create_flower_plot()
+    main()
